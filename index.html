@@ -315,6 +315,7 @@ footer .wrap { display: flex; flex-wrap: wrap; gap: 20px; align-items: center; j
             <li>Pagamento sicuro con PayPal o carta</li>
           </ul>
           <a class="btn hot" href="#prezzi" data-checkout="buy">Acquista e ricevi il codice</a>
+          <a class="btn" href="#prezzi" data-checkout="paypal" hidden>Paga con PayPal</a>
           <p class="pp-note" hidden style="margin:0;color:var(--dim);font-size:15px;text-align:center">Pagamento sicuro con PayPal o carta tramite PayPal</p>
         </div>
       </div>
@@ -404,7 +405,8 @@ const CONFIG = {
   buyCheckout: "",       // se usi Lemon Squeezy, questo link ha la precedenza su PayPal
   price: "€39",
   oldPrice: "€79",
-  supportEmail: "xhekamarius@gmail.com"   // es. "supporto@tuodominio.it": se vuoto la riga del supporto non compare
+  supportEmail: "xhekamarius@gmail.com",
+  stripeLink: ""   // link Stripe "https://buy.stripe.com/..." (carte, Apple Pay, Google Pay)   // es. "supporto@tuodominio.it": se vuoto la riga del supporto non compare
 };
 
 /* ---------- pulsanti di checkout ---------- */
@@ -432,14 +434,20 @@ const CONFIG = {
     if (CONFIG.siteUrl) { p.set("return", CONFIG.siteUrl + "#grazie"); p.set("cancel_return", CONFIG.siteUrl + "#prezzi"); }
     return "https://www.paypal.com/cgi-bin/webscr?" + p.toString();
   }
-  const usingPaypal = !CONFIG.buyCheckout && !!CONFIG.paypalEmail;
+  const usingPaypal = !CONFIG.buyCheckout && !CONFIG.stripeLink && !!CONFIG.paypalEmail;
   if (usingPaypal) {
     document.getElementById("flowCode").innerHTML = "Dopo il pagamento PayPal ricevi il codice <span class=\"key\">MFX-8F3K-27QD-W91P</span> all'email del tuo conto PayPal, entro 24 ore.";
     document.querySelectorAll(".pp-note").forEach((n) => n.hidden = false);
   }
 
+  if (CONFIG.stripeLink) {
+    CONFIG.buyCheckout = CONFIG.stripeLink;
+    document.querySelectorAll('[data-checkout="paypal"]').forEach((a) => a.hidden = false);
+    document.querySelectorAll(".pp-note").forEach((n) => { n.hidden = false; n.textContent = "Carta, Apple Pay, Google Pay o PayPal"; });
+  }
   document.querySelectorAll("[data-checkout]").forEach((a) => {
-    const url = a.dataset.checkout === "trial" ? CONFIG.trialCheckout : (CONFIG.buyCheckout || paypalUrl());
+    const k = a.dataset.checkout;
+    const url = k === "trial" ? CONFIG.trialCheckout : k === "paypal" ? paypalUrl() : (CONFIG.buyCheckout || paypalUrl());
     if (url) { a.href = url; a.target = "_blank"; a.rel = "noopener"; return; }
     a.addEventListener("click", (e) => {
       // nella sezione prezzi, senza link configurato: spiega cosa manca invece di non fare nulla
